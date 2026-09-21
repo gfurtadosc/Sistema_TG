@@ -25,6 +25,128 @@ historico_escalas = []       # Lista de tuplas (dia, comandante_do_dia, atirador
 
 
 # ============================================================
+# PALETA E ESTILO VISUAL (identidade militar: verde-oliva + dourado)
+# ============================================================
+COR_FUNDO = "#10160D"          # Fundo principal da janela (quase preto esverdeado)
+COR_PAINEL = "#1B2515"         # Fundo dos "cards"/painéis
+COR_PAINEL_CLARO = "#26331C"   # Fundo de campos de entrada (Text)
+COR_BORDA = "#3C4A2A"          # Bordas discretas
+COR_OLIVA = "#4B5320"          # Verde-oliva (cor tradicional do Exército)
+COR_OLIVA_CLARO = "#5E6B2C"    # Verde-oliva em estado "hover"
+COR_DOURADO = "#C9A24B"        # Dourado (destaque, cor de insígnias militares)
+COR_DOURADO_CLARO = "#DFBE72"  # Dourado em estado "hover"
+COR_TEXTO = "#EDEAE0"          # Texto principal sobre fundo escuro
+COR_TEXTO_SEC = "#9FAE8C"      # Texto secundário/rótulos
+COR_TEXTO_ESCURO = "#14190D"   # Texto escuro sobre fundo dourado
+
+FONTE_FAMILIA = "Segoe UI"
+FONTE_BASE = (FONTE_FAMILIA, 10)
+FONTE_BASE_NEGRITO = (FONTE_FAMILIA, 10, "bold")
+FONTE_TITULO = (FONTE_FAMILIA, 19, "bold")
+FONTE_SUBTITULO = (FONTE_FAMILIA, 9)
+FONTE_SECAO = (FONTE_FAMILIA, 10, "bold")
+FONTE_STAT_ROTULO = (FONTE_FAMILIA, 8, "bold")
+FONTE_STAT_VALOR = (FONTE_FAMILIA, 17, "bold")
+
+
+def configurar_estilo(estilo):
+    # SEQUÊNCIA: define o tema base e sobrescreve suas cores com a paleta militar
+    estilo.theme_use("clam")
+
+    estilo.configure("TFrame", background=COR_FUNDO)
+    estilo.configure("TLabel", background=COR_FUNDO, foreground=COR_TEXTO, font=FONTE_BASE)
+
+    # "Cards" (LabelFrame) com borda dourada fina, simulando painéis táticos
+    estilo.configure(
+        "Card.TLabelframe",
+        background=COR_PAINEL,
+        bordercolor=COR_DOURADO,
+        borderwidth=1,
+        relief="solid",
+    )
+    estilo.configure(
+        "Card.TLabelframe.Label",
+        background=COR_PAINEL,
+        foreground=COR_DOURADO,
+        font=FONTE_SECAO,
+    )
+
+    # Botão primário: ação principal do fluxo, em destaque dourado
+    estilo.configure(
+        "Primary.TButton",
+        background=COR_DOURADO,
+        foreground=COR_TEXTO_ESCURO,
+        font=FONTE_BASE_NEGRITO,
+        padding=(16, 9),
+        borderwidth=0,
+        relief="flat",
+    )
+    estilo.map(
+        "Primary.TButton",
+        background=[("active", COR_DOURADO_CLARO), ("disabled", COR_BORDA)],
+        foreground=[("disabled", COR_TEXTO_SEC)],
+    )
+
+    # Botão secundário: ação de apoio, em verde-oliva
+    estilo.configure(
+        "Secondary.TButton",
+        background=COR_OLIVA,
+        foreground=COR_TEXTO,
+        font=FONTE_BASE_NEGRITO,
+        padding=(16, 9),
+        borderwidth=0,
+        relief="flat",
+    )
+    estilo.map("Secondary.TButton", background=[("active", COR_OLIVA_CLARO)])
+
+    # Treeview (histórico) em tema escuro com cabeçalho em destaque
+    estilo.configure(
+        "Treeview",
+        background=COR_PAINEL,
+        fieldbackground=COR_PAINEL,
+        foreground=COR_TEXTO,
+        rowheight=30,
+        font=FONTE_BASE,
+        borderwidth=0,
+    )
+    estilo.configure(
+        "Treeview.Heading",
+        background=COR_OLIVA,
+        foreground=COR_TEXTO,
+        font=FONTE_BASE_NEGRITO,
+        relief="flat",
+    )
+    estilo.map(
+        "Treeview",
+        background=[("selected", COR_DOURADO)],
+        foreground=[("selected", COR_TEXTO_ESCURO)],
+    )
+
+    # Barra de rolagem discreta, alinhada à paleta
+    estilo.configure(
+        "Vertical.TScrollbar",
+        background=COR_OLIVA,
+        troughcolor=COR_FUNDO,
+        bordercolor=COR_FUNDO,
+        arrowcolor=COR_TEXTO,
+        relief="flat",
+    )
+
+
+def criar_stat_card(pai, rotulo_texto, destaque=True):
+    # Monta um "card" de estatística (rótulo pequeno + valor em destaque)
+    card = tk.Frame(pai, bg=COR_PAINEL, highlightthickness=1, highlightbackground=COR_BORDA)
+    tk.Label(card, text=rotulo_texto, bg=COR_PAINEL, fg=COR_TEXTO_SEC, font=FONTE_STAT_ROTULO).pack(
+        anchor="w", padx=14, pady=(12, 0)
+    )
+    fonte_valor = FONTE_STAT_VALOR if destaque else FONTE_BASE_NEGRITO
+    cor_valor = COR_DOURADO if destaque else COR_TEXTO
+    valor = tk.Label(card, text="-", bg=COR_PAINEL, fg=cor_valor, font=fonte_valor)
+    valor.pack(anchor="w", padx=14, pady=(0, 12))
+    return card, valor
+
+
+# ============================================================
 # FUNÇÕES DE GERAÇÃO DE DADOS PADRÃO
 # ============================================================
 def gerar_nomes_padrao_pelotao():
@@ -195,7 +317,12 @@ def gerar_novo_dia():
         return
 
     historico_escalas.append((dia_atual, comandante_do_dia, atirador_ronda_do_dia))
-    arvore_historico.insert("", tk.END, values=(dia_atual, comandante_do_dia, atirador_ronda_do_dia))
+
+    # SELEÇÃO: alterna a cor de fundo da linha (zebra striping) para leitura mais fácil
+    tag_linha = "linha_par" if dia_atual % 2 == 0 else "linha_impar"
+    arvore_historico.insert(
+        "", tk.END, values=(dia_atual, comandante_do_dia, atirador_ronda_do_dia), tags=(tag_linha,)
+    )
     arvore_historico.yview_moveto(1.0)  # Rola a visualização até o registro mais recente
 
     atualizar_painel_estado()
@@ -252,96 +379,167 @@ def main():
     global lbl_comandante_valor, lbl_ronda_valor
 
     janela = tk.Tk()
-    janela.title("Escala Automática - Ronda e Comandante da Guarda")
-    janela.geometry("860x680")
-    janela.minsize(760, 600)
+    janela.title("Sistema de Escala Automática — Tiro de Guerra")
+    janela.geometry("1000x760")
+    janela.minsize(900, 680)
+    janela.configure(bg=COR_FUNDO)
 
     estilo = ttk.Style()
-    estilo.theme_use("clam")  # Estilo nativo consistente entre plataformas
+    configurar_estilo(estilo)
+
+    # --------------------------------------------------------
+    # Cabeçalho institucional
+    # --------------------------------------------------------
+    frame_header = tk.Frame(janela, bg=COR_PAINEL)
+    frame_header.pack(fill="x")
+    tk.Label(
+        frame_header,
+        text="★  SISTEMA DE ESCALA AUTOMÁTICA  ★",
+        bg=COR_PAINEL, fg=COR_DOURADO, font=FONTE_TITULO,
+    ).pack(pady=(18, 2))
+    tk.Label(
+        frame_header,
+        text="ATIRADOR DE RONDA  ·  COMANDANTE DA GUARDA DO DIA  —  TIRO DE GUERRA",
+        bg=COR_PAINEL, fg=COR_TEXTO_SEC, font=FONTE_SUBTITULO,
+    ).pack(pady=(0, 16))
+    tk.Frame(janela, bg=COR_DOURADO, height=2).pack(fill="x")
+
+    container = ttk.Frame(janela, padding=16)
+    container.pack(fill="both", expand=True)
 
     # --------------------------------------------------------
     # Bloco 1: Carregamento dos vetores
     # --------------------------------------------------------
-    frame_vetores = ttk.LabelFrame(janela, text="1. Vetores de Entrada (um nome por linha)")
-    frame_vetores.pack(fill="x", padx=10, pady=8)
+    frame_vetores = ttk.LabelFrame(
+        container, text="VETORES DE ENTRADA  (um nome por linha)", style="Card.TLabelframe"
+    )
+    frame_vetores.pack(fill="x", pady=(0, 14))
 
-    frame_vetor_pelotao = ttk.Frame(frame_vetores)
-    frame_vetor_pelotao.grid(row=0, column=0, padx=8, pady=8, sticky="nsew")
-    ttk.Label(frame_vetor_pelotao, text=f"Vetor do Pelotão ({TAMANHO_PELOTAO} atiradores)").pack(anchor="w")
-    txt_pelotao = tk.Text(frame_vetor_pelotao, width=32, height=10)
+    corpo_vetores = tk.Frame(frame_vetores, bg=COR_PAINEL)
+    corpo_vetores.pack(fill="both", expand=True, padx=4, pady=4)
+
+    frame_vetor_pelotao = tk.Frame(corpo_vetores, bg=COR_PAINEL)
+    frame_vetor_pelotao.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+    tk.Label(
+        frame_vetor_pelotao, text=f"PELOTÃO  ({TAMANHO_PELOTAO} atiradores)",
+        bg=COR_PAINEL, fg=COR_TEXTO_SEC, font=FONTE_STAT_ROTULO,
+    ).pack(anchor="w", pady=(0, 6))
+    txt_pelotao = tk.Text(
+        frame_vetor_pelotao, width=32, height=10,
+        bg=COR_PAINEL_CLARO, fg=COR_TEXTO, insertbackground=COR_TEXTO,
+        relief="flat", highlightthickness=1, highlightbackground=COR_BORDA,
+        highlightcolor=COR_DOURADO, font=FONTE_BASE, padx=8, pady=8,
+    )
     txt_pelotao.pack(fill="both", expand=True)
 
-    frame_vetor_comandantes = ttk.Frame(frame_vetores)
-    frame_vetor_comandantes.grid(row=0, column=1, padx=8, pady=8, sticky="nsew")
-    ttk.Label(frame_vetor_comandantes, text=f"Vetor de Comandantes Elegíveis ({TAMANHO_COMANDANTES} atiradores)").pack(anchor="w")
-    txt_comandantes = tk.Text(frame_vetor_comandantes, width=32, height=10)
+    frame_vetor_comandantes = tk.Frame(corpo_vetores, bg=COR_PAINEL)
+    frame_vetor_comandantes.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+    tk.Label(
+        frame_vetor_comandantes, text=f"COMANDANTES ELEGÍVEIS  ({TAMANHO_COMANDANTES} atiradores)",
+        bg=COR_PAINEL, fg=COR_TEXTO_SEC, font=FONTE_STAT_ROTULO,
+    ).pack(anchor="w", pady=(0, 6))
+    txt_comandantes = tk.Text(
+        frame_vetor_comandantes, width=32, height=10,
+        bg=COR_PAINEL_CLARO, fg=COR_TEXTO, insertbackground=COR_TEXTO,
+        relief="flat", highlightthickness=1, highlightbackground=COR_BORDA,
+        highlightcolor=COR_DOURADO, font=FONTE_BASE, padx=8, pady=8,
+    )
     txt_comandantes.pack(fill="both", expand=True)
 
-    frame_vetores.columnconfigure(0, weight=1)
-    frame_vetores.columnconfigure(1, weight=1)
+    corpo_vetores.columnconfigure(0, weight=1)
+    corpo_vetores.columnconfigure(1, weight=1)
 
-    frame_botoes_vetores = ttk.Frame(frame_vetores)
-    frame_botoes_vetores.grid(row=1, column=0, columnspan=2, pady=(0, 8))
-    ttk.Button(frame_botoes_vetores, text="Restaurar Nomes Padrão", command=restaurar_padrao).pack(side="left", padx=4)
-    ttk.Button(frame_botoes_vetores, text="Carregar Vetores / Iniciar Sistema", command=carregar_vetores).pack(side="left", padx=4)
+    frame_botoes_vetores = tk.Frame(corpo_vetores, bg=COR_PAINEL)
+    frame_botoes_vetores.grid(row=1, column=0, columnspan=2, pady=(0, 10))
+    ttk.Button(
+        frame_botoes_vetores, text="Restaurar Nomes Padrão",
+        style="Secondary.TButton", command=restaurar_padrao,
+    ).pack(side="left", padx=6)
+    ttk.Button(
+        frame_botoes_vetores, text="Carregar Vetores / Iniciar Sistema",
+        style="Primary.TButton", command=carregar_vetores,
+    ).pack(side="left", padx=6)
 
     # --------------------------------------------------------
     # Bloco 2: Painel de estado atual (exibição em tempo real)
     # --------------------------------------------------------
-    frame_estado = ttk.LabelFrame(janela, text="2. Estado Atual do Sistema")
-    frame_estado.pack(fill="x", padx=10, pady=8)
+    tk.Label(
+        container, text="ESTADO ATUAL DO SISTEMA",
+        bg=COR_FUNDO, fg=COR_DOURADO, font=FONTE_SECAO,
+    ).pack(anchor="w", pady=(0, 8))
 
-    ttk.Label(frame_estado, text="Dia de instrução atual:").grid(row=0, column=0, sticky="w", padx=8, pady=4)
-    lbl_dia_valor = ttk.Label(frame_estado, text="0", font=("Segoe UI", 10, "bold"))
-    lbl_dia_valor.grid(row=0, column=1, sticky="w", padx=8, pady=4)
+    linha_stats_principal = tk.Frame(container, bg=COR_FUNDO)
+    linha_stats_principal.pack(fill="x", pady=(0, 8))
+    linha_stats_principal.columnconfigure(0, weight=1)
+    linha_stats_principal.columnconfigure(1, weight=1)
+    linha_stats_principal.columnconfigure(2, weight=1)
 
-    ttk.Label(frame_estado, text="ponteiro_ronda:").grid(row=1, column=0, sticky="w", padx=8, pady=4)
-    lbl_ponteiro_ronda_valor = ttk.Label(frame_estado, text="-")
-    lbl_ponteiro_ronda_valor.grid(row=1, column=1, sticky="w", padx=8, pady=4)
+    card_dia, lbl_dia_valor = criar_stat_card(linha_stats_principal, "DIA DE INSTRUÇÃO")
+    card_dia.grid(row=0, column=0, padx=(0, 8), sticky="nsew")
 
-    ttk.Label(frame_estado, text="ponteiro_comandante:").grid(row=2, column=0, sticky="w", padx=8, pady=4)
-    lbl_ponteiro_comandante_valor = ttk.Label(frame_estado, text="-")
-    lbl_ponteiro_comandante_valor.grid(row=2, column=1, sticky="w", padx=8, pady=4)
+    card_comandante, lbl_comandante_valor = criar_stat_card(linha_stats_principal, "COMANDANTE DA GUARDA DO DIA")
+    card_comandante.grid(row=0, column=1, padx=8, sticky="nsew")
 
-    ttk.Label(frame_estado, text="Comandante da Guarda do Dia:").grid(row=0, column=2, sticky="w", padx=8, pady=4)
-    lbl_comandante_valor = ttk.Label(frame_estado, text="-", font=("Segoe UI", 10, "bold"))
-    lbl_comandante_valor.grid(row=0, column=3, sticky="w", padx=8, pady=4)
+    card_ronda, lbl_ronda_valor = criar_stat_card(linha_stats_principal, "ATIRADOR DE RONDA DO DIA")
+    card_ronda.grid(row=0, column=2, padx=(8, 0), sticky="nsew")
 
-    ttk.Label(frame_estado, text="Atirador de Ronda do Dia:").grid(row=1, column=2, sticky="w", padx=8, pady=4)
-    lbl_ronda_valor = ttk.Label(frame_estado, text="-", font=("Segoe UI", 10, "bold"))
-    lbl_ronda_valor.grid(row=1, column=3, sticky="w", padx=8, pady=4)
+    linha_stats_ponteiros = tk.Frame(container, bg=COR_FUNDO)
+    linha_stats_ponteiros.pack(fill="x", pady=(0, 14))
+    linha_stats_ponteiros.columnconfigure(0, weight=1)
+    linha_stats_ponteiros.columnconfigure(1, weight=1)
+
+    card_ponteiro_ronda, lbl_ponteiro_ronda_valor = criar_stat_card(
+        linha_stats_ponteiros, "ponteiro_ronda", destaque=False
+    )
+    card_ponteiro_ronda.grid(row=0, column=0, padx=(0, 8), sticky="nsew")
+
+    card_ponteiro_comandante, lbl_ponteiro_comandante_valor = criar_stat_card(
+        linha_stats_ponteiros, "ponteiro_comandante", destaque=False
+    )
+    card_ponteiro_comandante.grid(row=0, column=1, padx=(8, 0), sticky="nsew")
 
     # --------------------------------------------------------
     # Bloco 3: Ações do dia
     # --------------------------------------------------------
-    frame_acoes = ttk.Frame(janela)
-    frame_acoes.pack(fill="x", padx=10, pady=4)
+    frame_acoes = tk.Frame(container, bg=COR_FUNDO)
+    frame_acoes.pack(fill="x", pady=(0, 14))
 
-    btn_novo_dia = ttk.Button(frame_acoes, text="Gerar Novo Dia", command=gerar_novo_dia, state=tk.DISABLED)
-    btn_novo_dia.pack(side="left", padx=4)
+    btn_novo_dia = ttk.Button(
+        frame_acoes, text="Gerar Novo Dia",
+        style="Primary.TButton", command=gerar_novo_dia, state=tk.DISABLED,
+    )
+    btn_novo_dia.pack(side="left", padx=(0, 8))
 
-    ttk.Button(frame_acoes, text="Consultar Escala do Dia", command=consultar_escala_do_dia).pack(side="left", padx=4)
+    ttk.Button(
+        frame_acoes, text="Consultar Escala do Dia",
+        style="Secondary.TButton", command=consultar_escala_do_dia,
+    ).pack(side="left")
 
     # --------------------------------------------------------
     # Bloco 4: Histórico de escalas (Treeview)
     # --------------------------------------------------------
-    frame_historico = ttk.LabelFrame(janela, text="3. Histórico de Escalas")
-    frame_historico.pack(fill="both", expand=True, padx=10, pady=8)
+    frame_historico = ttk.LabelFrame(container, text="HISTÓRICO DE ESCALAS", style="Card.TLabelframe")
+    frame_historico.pack(fill="both", expand=True)
+
+    corpo_historico = tk.Frame(frame_historico, bg=COR_PAINEL)
+    corpo_historico.pack(fill="both", expand=True, padx=4, pady=4)
 
     colunas = ("dia", "comandante", "ronda")
-    arvore_historico = ttk.Treeview(frame_historico, columns=colunas, show="headings", height=10)
+    arvore_historico = ttk.Treeview(corpo_historico, columns=colunas, show="headings", height=10)
     arvore_historico.heading("dia", text="Dia")
     arvore_historico.heading("comandante", text="Comandante da Guarda")
     arvore_historico.heading("ronda", text="Atirador de Ronda")
-    arvore_historico.column("dia", width=60, anchor="center")
-    arvore_historico.column("comandante", width=200, anchor="center")
-    arvore_historico.column("ronda", width=200, anchor="center")
+    arvore_historico.column("dia", width=70, anchor="center")
+    arvore_historico.column("comandante", width=240, anchor="center")
+    arvore_historico.column("ronda", width=240, anchor="center")
+    arvore_historico.tag_configure("linha_par", background=COR_PAINEL_CLARO, foreground=COR_TEXTO)
+    arvore_historico.tag_configure("linha_impar", background=COR_PAINEL, foreground=COR_TEXTO)
 
-    barra_rolagem = ttk.Scrollbar(frame_historico, orient="vertical", command=arvore_historico.yview)
+    barra_rolagem = ttk.Scrollbar(corpo_historico, orient="vertical", command=arvore_historico.yview)
     arvore_historico.configure(yscrollcommand=barra_rolagem.set)
 
-    arvore_historico.pack(side="left", fill="both", expand=True, padx=(8, 0), pady=8)
-    barra_rolagem.pack(side="right", fill="y", pady=8)
+    arvore_historico.pack(side="left", fill="both", expand=True, padx=(4, 0), pady=4)
+    barra_rolagem.pack(side="right", fill="y", pady=4)
 
     # Preenche os campos de texto com os nomes padrão já na abertura do sistema
     restaurar_padrao()
