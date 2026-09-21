@@ -5,17 +5,22 @@ Paradigma: 100% procedural (sem uso de `class`).
 Interface gráfica: tkinter + tkinter.ttk (ttk.Style para estilo nativo).
 """
 
+import random
 import tkinter as tk
 from tkinter import ttk, messagebox
 
 # ============================================================
 # ESTRUTURAS DE DADOS GLOBAIS (vetores e ponteiros)
 # ============================================================
-TAMANHO_PELOTAO = 50        # Tamanho fixo do vetor de atiradores do pelotão
-TAMANHO_COMANDANTES = 12    # Tamanho fixo do vetor de atiradores elegíveis a comandante
+# O efetivo real do pelotão é de 50 atiradores. Os 12 comandantes elegíveis
+# são um subconjunto desses 50 (não pessoas à parte), por isso o vetor do
+# pelotão guarda apenas os 38 atiradores sem elegibilidade a comando:
+# TAMANHO_PELOTAO + TAMANHO_COMANDANTES = 50 (efetivo total).
+TAMANHO_PELOTAO = 38         # Tamanho fixo do vetor de atiradores sem elegibilidade a comando
+TAMANHO_COMANDANTES = 12     # Tamanho fixo do vetor de atiradores elegíveis a comandante
 
-vetor_pelotao = []          # Vetor de 50 posições: atiradores em ordem de formatura
-vetor_comandantes = []      # Vetor de 12 posições: atiradores elegíveis a comandante da guarda
+vetor_pelotao = []          # Vetor de atiradores (sem elegibilidade a comando) em ordem de formatura
+vetor_comandantes = []      # Vetor de atiradores elegíveis a comandante da guarda
 
 ponteiro_ronda = 0          # Aponta a próxima posição a servir no vetor_pelotao
 ponteiro_comandante = 0     # Aponta a próxima posição a servir no vetor_comandantes
@@ -149,20 +154,57 @@ def criar_stat_card(pai, rotulo_texto, destaque=True):
 # ============================================================
 # FUNÇÕES DE GERAÇÃO DE DADOS PADRÃO
 # ============================================================
+NOMES_PROPRIOS = [
+    "João", "Pedro", "Lucas", "Gabriel", "Matheus", "Rafael", "Bruno", "Carlos",
+    "Daniel", "Eduardo", "Felipe", "Gustavo", "Henrique", "Igor", "Kaique",
+    "Leonardo", "Marcos", "Nicolas", "Otávio", "Paulo", "Rodrigo", "Samuel",
+    "Thiago", "Vinícius", "Wesley", "André", "Breno", "Caio", "Diego", "Fábio",
+]  # Banco de nomes próprios para sorteio
+
+SOBRENOMES = [
+    "Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves",
+    "Pereira", "Lima", "Gomes", "Costa", "Ribeiro", "Martins", "Carvalho",
+    "Almeida", "Lopes", "Soares", "Fernandes", "Vieira", "Barbosa", "Rocha",
+    "Dias", "Monteiro", "Cardoso", "Reis", "Araújo", "Castro", "Andrade",
+    "Nascimento", "Moreira",
+]  # Banco de sobrenomes para sorteio
+
+
+def gerar_pessoas_aleatorias(quantidade, nomes_ja_usados):
+    """
+    DADO um banco de nomes próprios e sobrenomes
+    QUANDO o sistema precisa sortear um vetor de nomes completos
+    ENTÃO retorna `quantidade` nomes distintos entre si e distintos de
+    `nomes_ja_usados`, simulando o efetivo real de atiradores do pelotão.
+    """
+    nomes_sorteados = []
+
+    # REPETIÇÃO: continua sorteando até atingir a quantidade solicitada
+    while len(nomes_sorteados) < quantidade:
+        # Usa random.choice() para sortear um nome próprio e um sobrenome do banco,
+        # substituindo um cálculo manual de índice aleatório com random.random()
+        primeiro_nome = random.choice(NOMES_PROPRIOS)
+        sobrenome = random.choice(SOBRENOMES)
+        nome_completo = f"{primeiro_nome} {sobrenome}"
+
+        # SELEÇÃO: só aceita o nome sorteado se ele ainda não foi usado em nenhum
+        # dos dois vetores. Usa o operador `in` para checar pertencimento na lista,
+        # substituindo um loop manual de comparação nome a nome.
+        if nome_completo not in nomes_ja_usados and nome_completo not in nomes_sorteados:
+            nomes_sorteados.append(nome_completo)
+
+    return nomes_sorteados
+
+
 def gerar_nomes_padrao_pelotao():
-    # SEQUÊNCIA + REPETIÇÃO: monta o vetor de 50 atiradores em ordem de formatura
-    nomes = []
-    for i in range(TAMANHO_PELOTAO):  # REPETIÇÃO: percorre as 50 posições do vetor
-        nomes.append(f"Atirador {i + 1:02d}")
-    return nomes
+    # SEQUÊNCIA: sorteia os atiradores sem elegibilidade a comando
+    return gerar_pessoas_aleatorias(TAMANHO_PELOTAO, [])
 
 
-def gerar_nomes_padrao_comandantes():
-    # SEQUÊNCIA + REPETIÇÃO: monta o vetor de 12 atiradores elegíveis a comandante
-    nomes = []
-    for i in range(TAMANHO_COMANDANTES):  # REPETIÇÃO: percorre as 12 posições do vetor
-        nomes.append(f"Cmt-Curso {i + 1:02d}")
-    return nomes
+def gerar_nomes_padrao_comandantes(nomes_pelotao):
+    # SEQUÊNCIA: sorteia os atiradores elegíveis a comando, excluindo quem já
+    # foi sorteado para o vetor do pelotão (mesmo efetivo, vetores disjuntos)
+    return gerar_pessoas_aleatorias(TAMANHO_COMANDANTES, nomes_pelotao)
 
 
 # ============================================================
@@ -230,12 +272,17 @@ def selecionar_atirador_ronda(comandante_do_dia):
 # FUNÇÕES DE INTERFACE (dependem dos widgets criados em main())
 # ============================================================
 def restaurar_padrao():
-    # SEQUÊNCIA: limpa e repreenche as caixas de texto com os nomes padrão gerados
+    # SEQUÊNCIA: sorteia o pelotão primeiro, depois os comandantes (excluindo
+    # quem já foi sorteado para o pelotão, já que é o mesmo efetivo de 50)
+    nomes_pelotao = gerar_nomes_padrao_pelotao()
+    nomes_comandantes = gerar_nomes_padrao_comandantes(nomes_pelotao)
+
+    # SEQUÊNCIA: limpa e repreenche as caixas de texto com os nomes sorteados
     txt_pelotao.delete("1.0", tk.END)
-    txt_pelotao.insert(tk.END, "\n".join(gerar_nomes_padrao_pelotao()))
+    txt_pelotao.insert(tk.END, "\n".join(nomes_pelotao))
 
     txt_comandantes.delete("1.0", tk.END)
-    txt_comandantes.insert(tk.END, "\n".join(gerar_nomes_padrao_comandantes()))
+    txt_comandantes.insert(tk.END, "\n".join(nomes_comandantes))
 
 
 def carregar_vetores():
